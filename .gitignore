@@ -41,6 +41,11 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Regenerated from @dpdpguard/contract's openapi/v1.yaml by scripts/codegen.mjs
+# (postinstall / npm run codegen) — never hand-edited.
+src/generated/
+lib/
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 
