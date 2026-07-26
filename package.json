@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "description": "DPDP Guard React Native SDK - typed HTTP client over the DPDP Guard /api/v1 surface, usable via plain fetch (no native module)",
   "main": "src/index",
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "!src/generated",
+    "scripts/codegen.mjs"
+  ],
   "scripts": {
     "codegen": "node scripts/codegen.mjs",
     "postinstall": "node scripts/codegen.mjs",
