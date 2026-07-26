@@ -1,0 +1,50 @@
+name: Publish @dpdpguard/react-native
+
+# Trusted publishing (OIDC) to npm — no NPM_TOKEN secret needed. Requires a
+# one-time setup step on npmjs.com under @dpdpguard/react-native's Settings >
+# Trusted Publisher: Publisher=GitHub Actions, Organization/user=dpdp-guard-ai,
+# Repository=dpdpguard-react-native-sdk, Workflow filename=publish.yml.
+#
+# Triggers: manually (workflow_dispatch) or by pushing a tag matching v*
+# (e.g. `git tag v0.1.0 && git push origin v0.1.0`).
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      # Required for npm's OIDC trusted-publisher exchange.
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm install
+
+      # Trusted publishing requires npm >= 11.5.0; pin explicitly rather
+      # than trust whatever ships with the Node version above.
+      - name: Ensure a trusted-publishing-capable npm
+        run: npm install -g npm@latest
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Required gate (ADR-002 D5): src/errorCatalog.test.ts and
+      # src/consentGate.test.ts must pass before publish.
+      - name: Test
+        run: npm test
+
+      - name: Publish @dpdpguard/react-native
+        run: npm publish
