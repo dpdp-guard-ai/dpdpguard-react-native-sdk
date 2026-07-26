@@ -4,7 +4,6 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["es2020"],
-    "jsx": "react-native",
     "strict": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,

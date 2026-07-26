@@ -9,17 +9,24 @@ https://github.com/dpdp-guard-ai/dpdpbot/blob/main/docs/specs/mobile-server-sdk.
 
 ## What's here vs. what's not
 
-This repo was scaffolded as a `create-react-native-library` turbo-module
-(`multiply()` native stub, Android/iOS native folders) intended to
-eventually bridge over native Android/iOS consent engines (ADR-005) — that
-native bridge is **not built yet**; it depends on the native
-`dpdpguard-android-sdk`/`dpdpguard-ios-sdk` consent engines (ADR-003)
-existing first, which they don't.
+This repo was originally scaffolded as a `create-react-native-library`
+turbo-module (`multiply()` native stub, Android/iOS native folders) on the
+assumption it would eventually bridge over the native Android/iOS consent
+engines (ADR-005). That native bridge was never built, and on review it
+isn't the right shape for this package anyway: `dpdpguard-android-sdk` and
+`dpdpguard-ios-sdk` are separate, independently-versioned native libraries
+(ADR-003), and bridging to them would tie every RN release to whatever
+native SDK versions happen to be vendored alongside it, for no benefit —
+none of this SDK's functionality needs on-device native code. The
+turbo-module scaffold (native folders, `NativeReactNative.ts`,
+`multiply()`) has been removed.
 
-What's implemented now is the **HTTP client layer**: a typed
+What's implemented instead is the **HTTP client layer**: a typed
 `DpdpGuardClient` over DPDP Guard's public `/api/v1` (spec §4.2), following
 the same pattern as `dpdpguard-server-sdk`/`dpdpguard-js-sdk` — usable
 today from RN app code via plain `fetch`, with no native module involved.
+This is also the pattern `dpdpguard-flutter-sdk` follows, for consistency
+across both hybrid SDKs.
 
 **Deliberately excluded, for security, not by omission:**
 
@@ -54,6 +61,17 @@ await client.createDsrRequest({ organizationId, type: 'erasure' });
 // Public reads need no auth at all.
 const org = await client.getOrganization('acme');
 const { notices } = await client.getNotices(org.orgId);
+
+// Recording consent from a banner shown *before* login (ADR-004 D6) needs
+// no auth either — just a client-generated anonymousId. Reconcile it into
+// the signed-in user's profile later with linkAnonymousConsent().
+await client.giveConsentAnonymous({
+  organizationId: org.orgId,
+  noticeId: notices[0]._id,
+  purpose: 'Analytics',
+  dataTypes: ['deviceId'],
+  anonymousId,
+});
 ```
 
 Every non-2xx response throws a `DpdpGuardApiError` with a `code` from the

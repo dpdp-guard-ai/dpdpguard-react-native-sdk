@@ -1,5 +1,3 @@
-export { multiply } from './multiply';
-
 export { DpdpGuardClient } from './client';
 export type { DpdpGuardClientOptions } from './client';
 export { DpdpGuardApiError, ERROR_CATALOG } from './errorCatalog';

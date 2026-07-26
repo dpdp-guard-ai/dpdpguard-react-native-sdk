@@ -112,6 +112,37 @@ describe("DpdpGuardClient", () => {
 		expect(init.headers["Idempotency-Key"]).toBe("idem-key-1");
 	});
 
+	test("giveConsentAnonymous is an unauthenticated call that forwards an Idempotency-Key header", async () => {
+		const fetchImpl = jest.fn().mockResolvedValue(
+			jsonResponse(201, {
+				consentId: "consent_1",
+				purpose: "Analytics",
+				dataTypes: ["deviceId"],
+				givenAt: 1700000000000,
+			}),
+		);
+		const client = new DpdpGuardClient({
+			baseUrl: "https://example.convex.site",
+			fetchImpl,
+		});
+
+		const result = await client.giveConsentAnonymous(
+			{
+				organizationId: "org_1",
+				noticeId: "notice_1",
+				purpose: "Analytics",
+				dataTypes: ["deviceId"],
+				anonymousId: "anon_1",
+			},
+			"idem-key-2",
+		);
+
+		expect(result.consentId).toBe("consent_1");
+		const [, init] = fetchImpl.mock.calls[0];
+		expect(init.headers.Authorization).toBeUndefined();
+		expect(init.headers["Idempotency-Key"]).toBe("idem-key-2");
+	});
+
 	test("has no brokerToken method — mobile apps must never hold the service API key", () => {
 		const client = new DpdpGuardClient({ baseUrl: "https://example.convex.site" });
 		expect((client as unknown as Record<string, unknown>).brokerToken).toBeUndefined();

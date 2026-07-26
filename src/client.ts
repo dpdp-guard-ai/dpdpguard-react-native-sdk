@@ -149,6 +149,33 @@ export class DpdpGuardClient {
 		});
 	}
 
+	/**
+	 * Records consent for a not-yet-authenticated guest (ADR-004 D6), e.g.
+	 * from a consent banner shown before login. Unauthenticated, rate-limited
+	 * public write, keyed by a client-generated `anonymousId`.
+	 */
+	giveConsentAnonymous(
+		input: {
+			organizationId: string;
+			noticeId: string;
+			purpose: string;
+			dataTypes: string[];
+			anonymousId: string;
+		},
+		idempotencyKey?: string,
+	): Promise<{
+		consentId: string;
+		purpose: string;
+		dataTypes: string[];
+		givenAt: number;
+	}> {
+		const options: RequestOptions = { body: input, auth: "none" };
+		if (idempotencyKey !== undefined) {
+			options.headers = { "Idempotency-Key": idempotencyKey };
+		}
+		return this.request("POST", "/api/v1/consents/anonymous", options);
+	}
+
 	// --- DSR (spec §4.2) ---
 
 	listDsrRequests(): Promise<{ requests: DsrRequest[] }> {
