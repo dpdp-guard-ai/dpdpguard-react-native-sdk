@@ -1,6 +1,6 @@
 {
   "name": "@dpdpguard/react-native",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "DPDP Guard React Native SDK - bridge over the native Android/iOS consent engines",
   "main": "src/index",
   "scripts": {
@@ -8,6 +8,10 @@
     "postinstall": "node scripts/codegen.mjs",
     "test": "jest",
     "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "codegenConfig": {
     "name": "ReactNativeSpec",
@@ -17,13 +21,9 @@
       "javaPackageName": "com.dpdpguard.reactnative"
     }
   },
-  "author": " <> ()",
+  "author": "DPDP Guard",
   "license": "MIT",
-  "homepage": "#readme",
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
+  "homepage": "https://github.com/dpdp-guard-ai/dpdpguard-react-native-sdk#readme",
   "devDependencies": {
     "@react-native/babel-preset": "0.85.0",
     "@types/jest": "^29.5.14",
