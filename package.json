@@ -22,6 +22,10 @@
   "author": "DPDP Guard",
   "license": "MIT",
   "homepage": "https://github.com/dpdp-guard-ai/dpdpguard-react-native-sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dpdp-guard-ai/dpdpguard-react-native-sdk"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^22.20.1",
