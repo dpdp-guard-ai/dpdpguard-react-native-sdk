@@ -20,6 +20,10 @@
   "author": " <> ()",
   "license": "MIT",
   "homepage": "#readme",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "devDependencies": {
     "@react-native/babel-preset": "0.85.0",
     "@types/jest": "^29.5.14",
