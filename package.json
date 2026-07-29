@@ -1,6 +1,6 @@
 {
   "name": "@dpdpguard/react-native",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "DPDP Guard React Native SDK - typed HTTP client over the DPDP Guard /api/v1 surface, usable via plain fetch (no native module)",
   "main": "src/index",
   "files": [
@@ -34,6 +34,6 @@
     "typescript": "~5.8"
   },
   "dependencies": {
-    "@dpdpguard/contract": "^0.2.0"
+    "@dpdpguard/contract": "^1.0.1"
   }
 }
