@@ -4,6 +4,50 @@ All notable changes to `@dpdpguard/react-native` will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] - 2026-08-12
+
+### Changed
+
+- Bumped `@dpdpguard/contract` dependency from `^1.0.1` to `^1.5.0`, syncing
+  past the four intermediate releases (`1.1.0`-`1.5.0`). Per ADR-002 D3/D4,
+  every one of these releases is classified additive (minor) — new
+  endpoints, new schemas, and (`1.2.0`) new `/mcp/v1` error codes — with no
+  breaking change to any existing endpoint, field, error code, or the
+  audit-hash canonicalization. This SDK's own public API (`DpdpGuardClient`,
+  `hasConsent`) is unchanged, so this is a minor bump rather than a major
+  one.
+- Regenerated `src/generated/api-types.ts` (gitignored, rebuilt by
+  `scripts/codegen.mjs` on `postinstall`/`npm run codegen`) against
+  `@dpdpguard/contract@1.5.0`'s `openapi/v1.yaml` (now `2.8.0`). The
+  regenerated output picks up types for endpoints this SDK does not wrap
+  with hand-written client methods and does not call:
+  - `1.1.0`: `GET /api/v1/retention/due`, `GET /api/v1/breaches`,
+    `GET /api/v1/cross-border/transfers`.
+  - `1.3.0`: `POST /api/v1/offline-consent/links`.
+  - `1.4.0`: `POST /api/v1/offline/captures`, `POST /api/v1/offline/pos`,
+    `POST /api/v1/offline/ivr`.
+  - `1.5.0`: `GET /api/v1/consent/gate/decisions`,
+    `GET /api/v1/consent/gate/alerts`.
+
+  None of these are Data-Principal-facing surfaces this SDK targets (see
+  "What's here vs. what's not" in README.md); the generated types exist
+  but nothing in `src/client.ts` or `src/index.ts` references them.
+- `errorCatalog.test.ts` updated: `@dpdpguard/contract`'s
+  `conformance/error-catalog.json` gained eleven codes in `1.2.0` for the
+  `/mcp/v1` agent surface (`SCOPE_INSUFFICIENT`, `TOOL_NOT_AVAILABLE`,
+  `ORG_DISABLED`, `APPROVAL_REQUIRED`, `APPROVAL_BACKLOG_FULL`,
+  `PROPOSAL_EXPIRED`, `SECOND_REVIEWER_REQUIRED`,
+  `PROPOSAL_ALREADY_REVIEWED`, `DATA_VOLUME_EXCEEDED`, `PLAN_LIMIT_REACHED`,
+  `AGENT_WRITE_BLOCKED`), taking `ERROR_CATALOG`'s length from 10 to 21.
+  The test's exact-list assertion was updated to match; this SDK does not
+  call `/mcp/v1` and none of these codes are otherwise referenced.
+- Does **not** touch audit-hash canonicalization or `ConsentRecord` shape
+  in any of the synced contract versions; no DPO sign-off applies
+  (ADR-002 D5).
+- `npm run typecheck` (`tsc --noEmit`) passes clean against the
+  regenerated types.
+- `npm test` passes: 3 suites, 12 tests, all green.
+
 ## [1.0.0] - 2026-07-29
 
 ### Changed
