@@ -7,7 +7,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      # npm install runs codegen via postinstall (scripts/codegen.mjs), which
+      # typecheck/test run codegen (scripts/codegen.mjs) first, which
       # regenerates src/generated/api-types.ts from the installed
       # @dpdpguard/contract's openapi/v1.yaml.
       - run: npm install

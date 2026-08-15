@@ -1,19 +1,16 @@
 {
   "name": "@dpdpguard/react-native",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "DPDP Guard React Native SDK - typed HTTP client over the DPDP Guard /api/v1 surface, usable via plain fetch (no native module)",
   "main": "src/index",
   "files": [
     "src",
-    "!src/**/*.test.ts",
-    "!src/generated",
-    "scripts/codegen.mjs"
+    "!src/**/*.test.ts"
   ],
   "scripts": {
     "codegen": "node scripts/codegen.mjs",
-    "postinstall": "node scripts/codegen.mjs",
-    "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "test": "npm run codegen && jest",
+    "typecheck": "npm run codegen && tsc --noEmit"
   },
   "publishConfig": {
     "access": "public",
