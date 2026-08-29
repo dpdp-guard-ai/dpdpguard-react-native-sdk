@@ -1,7 +1,8 @@
 #import "DpdpGuardOffline.h"
 
-#import <CommonCrypto/CommonCrypto.h>
 #import <Security/Security.h>
+
+#import "DpdpGuardReactNative-Swift.h"
 
 static NSString *const kSigningKeyTag = @"ai.dpdpguard.offline.signing-key";
 static NSString *const kStoreKeyAccount = @"ai.dpdpguard.offline.store-key";
@@ -269,46 +270,16 @@ static NSData *P1363FromDER(NSData *der) {
   return key;
 }
 
-/** AES-256-GCM. Layout on disk is `nonce(12) || ciphertext || tag(16)`. */
+/**
+ * AES-256-GCM via CryptoKit (DpdpGuardOfflineCrypto.swift — CommonCrypto has
+ * no public GCM API). Layout on disk is `nonce(12) || ciphertext || tag(16)`.
+ */
 static NSData *SealSession(NSData *plaintext, NSData *key) {
-  NSMutableData *nonce = [NSMutableData dataWithLength:12];
-  if (SecRandomCopyBytes(kSecRandomDefault, 12, nonce.mutableBytes) != errSecSuccess) {
-    return nil;
-  }
-
-  NSMutableData *ciphertext = [NSMutableData dataWithLength:plaintext.length];
-  NSMutableData *tag = [NSMutableData dataWithLength:16];
-
-  CCCryptorStatus status = CCCryptorGCMOneshotEncrypt(
-      kCCAlgorithmAES, key.bytes, key.length, nonce.bytes, nonce.length, NULL, 0,
-      plaintext.bytes, plaintext.length, ciphertext.mutableBytes,
-      tag.mutableBytes, tag.length);
-  if (status != kCCSuccess) return nil;
-
-  NSMutableData *sealed = [NSMutableData dataWithData:nonce];
-  [sealed appendData:ciphertext];
-  [sealed appendData:tag];
-  return sealed;
+  return [DpdpGuardOfflineCrypto seal:plaintext key:key];
 }
 
 static NSData *OpenSession(NSData *sealed, NSData *key) {
-  if (sealed.length < 12 + 16) return nil;
-
-  NSData *nonce = [sealed subdataWithRange:NSMakeRange(0, 12)];
-  NSUInteger ciphertextLength = sealed.length - 12 - 16;
-  NSData *ciphertext = [sealed subdataWithRange:NSMakeRange(12, ciphertextLength)];
-  NSData *tag = [sealed subdataWithRange:NSMakeRange(12 + ciphertextLength, 16)];
-
-  NSMutableData *plaintext = [NSMutableData dataWithLength:ciphertextLength];
-  NSMutableData *computedTag = [NSMutableData dataWithData:tag];
-
-  CCCryptorStatus status = CCCryptorGCMOneshotDecrypt(
-      kCCAlgorithmAES, key.bytes, key.length, nonce.bytes, nonce.length, NULL, 0,
-      ciphertext.bytes, ciphertext.length, plaintext.mutableBytes,
-      computedTag.bytes, computedTag.length);
-  if (status != kCCSuccess) return nil;
-
-  return plaintext;
+  return [DpdpGuardOfflineCrypto open:sealed key:key];
 }
 
 - (NSURL *)fileForSession:(NSString *)clientSessionId error:(NSError **)error {
