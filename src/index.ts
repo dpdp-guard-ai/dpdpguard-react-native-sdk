@@ -4,6 +4,8 @@ export { DpdpGuardApiError, ERROR_CATALOG } from './errorCatalog';
 export type { ApiErrorCode, ErrorCatalogEntry } from './errorCatalog';
 export { hasConsent } from './consentGate';
 export type { ConsentRecord } from './consentGate';
+export { canonicalAuditString } from './auditHash';
+export type { AuditHashInput, ConsentSource } from './auditHash';
 
 // The openapi-typescript output generated from the installed
 // @dpdpguard/contract's openapi/v1.yaml, re-exported so consumers can name

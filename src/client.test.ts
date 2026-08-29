@@ -143,6 +143,47 @@ describe("DpdpGuardClient", () => {
 		expect(init.headers["Idempotency-Key"]).toBe("idem-key-2");
 	});
 
+	test("call() reaches an endpoint with no facade method, carrying the bearer token", async () => {
+		const fetchImpl = jest
+			.fn()
+			.mockResolvedValue(jsonResponse(200, { decisions: [], denyThreshold: 3 }));
+		const client = new DpdpGuardClient({
+			baseUrl: "https://example.convex.site",
+			accessToken: "tok_1",
+			fetchImpl,
+		});
+
+		const result = await client.call<{ decisions: unknown[] }>(
+			"GET",
+			"/api/v1/consent/gate/decisions?limit=50",
+		);
+
+		expect(result.decisions).toEqual([]);
+		const [url, init] = fetchImpl.mock.calls[0];
+		expect(url).toBe(
+			"https://example.convex.site/api/v1/consent/gate/decisions?limit=50",
+		);
+		expect(init.method).toBe("GET");
+		expect(init.headers.Authorization).toBe("Bearer tok_1");
+	});
+
+	test("call() maps a non-2xx response to DpdpGuardApiError like every facade method", async () => {
+		const fetchImpl = jest
+			.fn()
+			.mockResolvedValue(
+				jsonResponse(401, { code: "UNAUTHORIZED", error: "nope" }),
+			);
+		const client = new DpdpGuardClient({
+			baseUrl: "https://example.convex.site",
+			accessToken: "tok_1",
+			fetchImpl,
+		});
+
+		await expect(
+			client.call("GET", "/api/v1/consent-status?email=a%40b.com"),
+		).rejects.toThrow(DpdpGuardApiError);
+	});
+
 	test("has no brokerToken method — mobile apps must never hold the service API key", () => {
 		const client = new DpdpGuardClient({ baseUrl: "https://example.convex.site" });
 		expect((client as unknown as Record<string, unknown>).brokerToken).toBeUndefined();

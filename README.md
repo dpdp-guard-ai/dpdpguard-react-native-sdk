@@ -37,10 +37,18 @@ across both hybrid SDKs.
   DPDP Guard's `/api/v1/auth/broker-token`, and hands the resulting
   short-lived access token to the app. `DpdpGuardClient` takes that token
   via `setAccessToken()` / the constructor, nothing more.
-- **No audit-hash or webhook-signature code.** Both require the
-  platform's HMAC secret (`DPDP_AUDIT_HASH_HMAC_SECRET` /
-  a webhook endpoint's own secret) — server-only concerns, irrelevant to
-  and unsafe inside a mobile client.
+- **No keyed audit hash, and no webhook-signature code.** Both require a
+  secret the app must not hold (`DPDP_AUDIT_HASH_HMAC_SECRET` / a webhook
+  endpoint's own secret) — server-only concerns, unsafe inside a mobile
+  client. The *unkeyed* half of the audit hash is available as
+  `canonicalAuditString()` (see [Audit-hash canonicalization](#audit-hash-canonicalization));
+  it needs no secret.
+- **No offline consent capture.** `dpdpguard-ios-sdk` implements the
+  device-side Cryptographic Consent Artifact (`docs/specs/offline-consent-capture.md`
+  §4) on top of Secure Enclave key storage and an encrypted local store.
+  That needs native code, which this package deliberately doesn't have — and
+  a software-only port would produce artifacts that don't prove what the
+  spec's artifacts prove.
 
 ## Usage
 
@@ -96,6 +104,52 @@ type GateDecision = components['schemas']['ConsentGateDecision'];
 The contract version these were generated from is recorded in
 `src/CONTRACT_VERSION`; `src/contractVersion.test.ts` fails if an install
 drifts off it.
+
+### Endpoints without a facade method
+
+The DPDP Guard API is wider than the Data-Principal surface this SDK
+curates. `call()` reaches the rest, with the same auth, URL joining, and
+`DpdpGuardApiError` mapping as every other method:
+
+```ts
+import type { components } from '@dpdpguard/react-native';
+
+type Decision = components['schemas']['ConsentGateDecision'];
+const { decisions } = await client.call<{ decisions: Decision[] }>(
+  'GET',
+  '/api/v1/consent/gate/decisions?limit=50',
+);
+```
+
+This widens reach, not privilege: the client still sends only the brokered
+principal token, so org-scoped endpoints will correctly 401 from an app.
+
+### Audit-hash canonicalization
+
+`canonicalAuditString()` builds the `|`-joined canonical string that the
+`consentAuditTrail.auditHash` is computed over
+(`@dpdpguard/contract`'s `conformance/audit-hash-spec.md`), checked against
+that package's golden vectors:
+
+```ts
+import { canonicalAuditString } from '@dpdpguard/react-native';
+
+canonicalAuditString({
+  organizationId: 'org_abc123',
+  noticeId: 'notice_v1',
+  noticeVersion: 1,
+  purpose: 'Marketing',
+  dataTypes: ['phone', 'email'], // sorted for you
+  givenAt: 1700000001000,
+  source: 'brokered',
+});
+// 'org_abc123|notice_v1|1|Marketing|email,phone|1700000001000|brokered'
+```
+
+The hash itself is `HMAC-SHA256` of this string under a secret that stays
+server-side, so this package stops at the canonical form — hand it to your
+backend to sign, or use it to check which event a hash your backend
+returned refers to.
 
 ## Contract
 

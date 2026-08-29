@@ -4,6 +4,63 @@ All notable changes to `@dpdpguard/react-native` will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.0] - 2026-08-29
+
+Closes the two remaining gaps found comparing this SDK against
+`dpdpguard-ios-sdk` (1.3.0) and `dpdpguard-android-sdk` (1.1.0) that are
+reachable without native code. The third — offline consent capture — is
+not, and is tracked separately; see **Not included** below.
+
+### Added
+
+- `canonicalAuditString(input)` (`src/auditHash.ts`) — the ADR-002 D5
+  audit-hash canonicalization from `conformance/audit-hash-spec.md`,
+  verified against all four golden vectors in
+  `conformance/audit-hash-vectors.json`. iOS (`AuditHash.swift`) and
+  Android (`AuditHash.kt`) have both shipped this since their 1.0.0; this
+  SDK was the only one in the family with no audit-hash code at all.
+
+  **The keyed half is deliberately still absent.** The full `auditHash` is
+  `HMAC-SHA256(canonical, DPDP_AUDIT_HASH_HMAC_SECRET)`, and the spec's
+  "Key management" section is explicit that the secret never leaves DPDP
+  Guard's infrastructure — anything in an app bundle is extractable from
+  the binary. The sibling SDKs expose `computeAuditHash(input, secret)`
+  because a server-side Kotlin/Swift caller may legitimately hold the key;
+  a React Native app never can. The unkeyed canonicalization is still
+  useful on its own: it produces the exact bytes your backend will sign,
+  and lets you re-derive an event's canonical form to check that a hash
+  your backend returned refers to the event you think it does.
+
+- `DpdpGuardClient.call<T>(method, path, options?)` — a typed escape hatch
+  for `/api/v1` endpoints this client has no facade method for, reusing the
+  same auth, base-URL joining, and `DpdpGuardApiError` mapping as every
+  facade method. The API is wider than the Data-Principal surface this SDK
+  curates and `src/generated/api-types.ts` types all of it, but before this
+  those endpoints were simply unreachable without a second HTTP stack.
+  `dpdpguard-ios-sdk` ships its entire generated `DPDPGuardConsentAPI`
+  target alongside its facade for the same reason.
+
+  This changes nothing about which credential the client holds — it still
+  sends only the brokered principal token from `setAccessToken()` and has
+  no service-API-key option, so org-scoped endpoints (`/api/v1/consent-status`,
+  the consent-gate reads) will correctly 401 from a mobile app. The escape
+  hatch widens reach, not privilege.
+
+### Not included
+
+- **Offline consent capture.** `dpdpguard-ios-sdk` 1.3.0 shipped the
+  device-side half of `docs/specs/offline-consent-capture.md` §4:
+  `CaptureArtifact` (`dpdpcca/2` canonicalization), `AgentDeviceIdentityStore`
+  (ECDSA P-256 in the Secure Enclave, Keychain fallback), `OfflineCaptureStore`
+  (AES-256-GCM-sealed, backup-excluded), and `OfflineCaptureManager`.
+  This SDK cannot follow: device-bound key storage and hardware-backed
+  signing require native code, and the turbo-module scaffold was removed in
+  `1.0.0` on the reasoning in README.md's "What's here vs. what's not". A
+  software-only port would produce artifacts that don't prove what the
+  spec's artifacts prove, which is worse than not shipping it. Note
+  `dpdpguard-android-sdk` does not have it either — offline capture is
+  iOS-only across the family today.
+
 ## [1.2.0] - 2026-08-29
 
 ### Changed

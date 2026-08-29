@@ -97,6 +97,41 @@ export class DpdpGuardClient {
 		return json as T;
 	}
 
+	/**
+	 * Escape hatch for an `/api/v1` endpoint this client has no facade
+	 * method for — the DPDP Guard API is wider than the Data-Principal
+	 * surface this SDK curates (see "What's here vs. what's not" in
+	 * README.md), and `src/generated/api-types.ts` types all of it.
+	 *
+	 * `dpdpguard-ios-sdk` ships its whole generated `DPDPGuardConsentAPI`
+	 * target next to the hand-written facade so nothing is unreachable;
+	 * this is the equivalent, without a second HTTP stack.
+	 *
+	 * Auth, base-URL joining, and {@link DpdpGuardApiError} mapping are the
+	 * same as every facade method. Note this changes nothing about *which*
+	 * credential the client holds: it still sends only the brokered
+	 * principal token from {@link setAccessToken}, never a service API key,
+	 * so org-scoped endpoints will correctly 401.
+	 *
+	 * @example
+	 * ```ts
+	 * import type { components } from '@dpdpguard/react-native';
+	 *
+	 * type Decision = components['schemas']['ConsentGateDecision'];
+	 * const { decisions } = await client.call<{ decisions: Decision[] }>(
+	 *   'GET',
+	 *   '/api/v1/consent/gate/decisions?limit=50',
+	 * );
+	 * ```
+	 */
+	call<T>(
+		method: string,
+		path: string,
+		options: { body?: unknown; auth?: "none" | "bearer" } = {},
+	): Promise<T> {
+		return this.request<T>(method, path, options);
+	}
+
 	// --- Public reads (no auth) ---
 
 	getOrganization(slug: string): Promise<OrgSummary> {
