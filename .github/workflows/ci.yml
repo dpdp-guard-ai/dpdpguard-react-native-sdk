@@ -1,15 +1,70 @@
 name: CI
 on: [push, pull_request]
 jobs:
-  build:
+  js:
+    name: Typecheck & test (JS)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with: { node-version: 22 }
       # typecheck/test run codegen (scripts/codegen.mjs) first, which
       # regenerates src/generated/api-types.ts from the installed
       # @dpdpguard/contract's openapi/v1.yaml.
       - run: npm install
       - run: npm run typecheck
       - run: npm test
+
+  android:
+    name: Build native module (Android)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+
+      - name: Install library dependencies
+        run: npm install
+
+      - name: Install example app dependencies
+        working-directory: example
+        run: npm install
+
+      # The real gate for android/src/main/java/**: this is what runs
+      # TurboModule codegen (producing NativeDpdpGuardOfflineSpec) and
+      # compiles DpdpGuardOfflineModule.kt against it. Nothing in the JS
+      # job would catch a Kotlin or codegen error.
+      - name: Assemble the example app
+        working-directory: example/android
+        run: ./gradlew assembleDebug --no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a
+
+  ios:
+    name: Build native module (iOS)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+
+      - name: Install library dependencies
+        run: npm install
+
+      - name: Install example app dependencies
+        working-directory: example
+        run: npm install
+
+      - name: Install pods
+        working-directory: example/ios
+        run: bundle install && bundle exec pod install
+
+      # Compiles ios/DpdpGuardOffline.mm against the generated
+      # DpdpGuardOfflineSpec header. The Security.framework and
+      # CommonCrypto calls in there are only checked here.
+      - name: Build the example app
+        working-directory: example
+        run: npx react-native build-ios --mode Debug

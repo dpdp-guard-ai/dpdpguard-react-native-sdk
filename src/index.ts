@@ -7,6 +7,39 @@ export type { ConsentRecord } from './consentGate';
 export { canonicalAuditString } from './auditHash';
 export type { AuditHashInput, ConsentSource } from './auditHash';
 
+// Offline consent capture (docs/specs/offline-consent-capture.md §4).
+// Requires the native module, so these are only usable in a React Native
+// app with the new architecture enabled — the HTTP client above is not.
+export {
+	MAX_SYNC_BATCH,
+	OfflineCaptureManager,
+	toSyncBody,
+} from './offline/OfflineCaptureManager';
+export type { OfflineCaptureManagerOptions } from './offline/OfflineCaptureManager';
+export {
+	CAPTURE_ARTIFACT_VERSION,
+	canonicalCaptureString,
+	compareUtf8,
+	utf8ByteLength,
+} from './offline/captureArtifact';
+export type {
+	CaptureArtifactInput,
+	CaptureChannel,
+	PrincipalHandleKind,
+	PurposeGrant,
+	PurposeGrantStatus,
+} from './offline/captureArtifact';
+export type {
+	CaptureInput,
+	CapturePurposeGrant,
+	OfflineCaptureResult,
+	OfflineCaptureSession,
+	OfflineCaptureSyncBody,
+	OfflineCaptureTransport,
+	PrincipalHandle,
+	PurposeCategory,
+} from './offline/types';
+
 // The openapi-typescript output generated from the installed
 // @dpdpguard/contract's openapi/v1.yaml, re-exported so consumers can name
 // the wire types this client returns (and reach endpoints `DpdpGuardClient`

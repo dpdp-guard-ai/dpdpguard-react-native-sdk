@@ -4,6 +4,79 @@ All notable changes to `@dpdpguard/react-native` will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.0.0] - 2026-08-29
+
+Offline consent capture, closing the last gap against `dpdpguard-ios-sdk`
+1.3.0. This is a major bump because the package now requires React Native's
+new architecture and declares `react`/`react-native` peer dependencies — it
+is no longer usable from a plain JS runtime with no RN present.
+
+### Added
+
+- **Offline consent capture** (`src/offline/`, `ios/`, `android/`) — the
+  device-side half of `docs/specs/offline-consent-capture.md` §4:
+  - `canonicalCaptureString()` — the `dpdpcca/2` canonicalization from
+    `conformance/audit-hash-spec.md`, reproducing all seven vectors in
+    `conformance/capture-artifact-vectors.json` byte-for-byte, including
+    the two the spec flags as most likely to break a port: UTF-8 *byte*
+    length framing (`विपणन` frames as `15:`, not `5:`) and byte-wise sorts
+    (JS's default `.sort()` compares UTF-16 units and disagrees above the
+    BMP). The separator-injection pair that killed `dpdpcca/1` is pinned
+    too.
+  - `OfflineCaptureManager` — `capture()` signs and queues with no network
+    I/O at all; `syncPending()` drains in batches of 200 and evicts every
+    acknowledged session. `enroll()` returns the SPKI public key to
+    register on `agentDevices`, and whether the key is genuinely
+    hardware-backed.
+  - Native modules for both platforms: Secure Enclave (iOS) and
+    StrongBox/TEE (Android) ECDSA P-256 keys that never leave the device,
+    and an AES-256-GCM-encrypted, backup-excluded local queue.
+
+  **The canonicalization is implemented once, in JavaScript.** The native
+  modules do key storage, signing, and encrypted persistence only. A
+  second implementation in Swift and a third in Kotlin could drift from
+  the server's, and drift means a legitimate consent quarantining as
+  `signature_mismatch` — the exact failure the algorithm exists to
+  prevent. This is a deliberate departure from `dpdpguard-ios-sdk`, which
+  canonicalizes natively because it has no JS layer to put it in.
+
+### Changed
+
+- **BREAKING:** `react-native >= 0.85.0` and `react >= 19.0.0` are now peer
+  dependencies, and the new architecture is required. The HTTP client
+  itself still uses nothing but `fetch` — importing `DpdpGuardClient` does
+  not touch the native module, which is resolved lazily and only when an
+  `OfflineCaptureManager` is constructed without an injected binding — but
+  the package as a whole no longer installs cleanly outside an RN app.
+- **BREAKING:** the leftover `ReactNative.podspec` from the original
+  scaffold is replaced by `DpdpGuardReactNative.podspec`. Anything
+  referencing the old pod name by hand needs updating; autolinking picks
+  the new one up on its own.
+- `.github/workflows/ci.yml` gains Android and iOS jobs that build the
+  example app. The JS job cannot catch a Kotlin, Objective-C++, or codegen
+  error, so without these the native code would ship unverified.
+
+### Notes
+
+- `POST /api/v1/offline/captures` is declared `security: [apiKey]` — an
+  org-scoped service key, which this SDK must never hold for the same
+  reason there is no `brokerToken()`. So `syncPending()` takes a transport
+  function the host app supplies, rather than calling the endpoint itself;
+  in practice that POSTs the batch to the app's own backend, which attaches
+  the key and forwards it verbatim. Capture, signing, and queueing are all
+  on-device; only the final hop is brokered. `dpdpguard-ios-sdk` calls the
+  endpoint directly because a fleet-enrolled field device may legitimately
+  hold an org key — a consumer RN app cannot.
+- **The native code in `ios/` and `android/` has not been built or run.**
+  It was written on Windows with no Xcode, no Android SDK, and no Kotlin
+  compiler available; only the JavaScript layer (48 tests, including every
+  golden vector) is verified. The new CI jobs are the real gate — do not
+  consider this release verified until they are green. The most likely
+  places to need adjustment are the generated-spec method signatures the
+  native classes override, which vary by React Native version, and the
+  `CCCryptorGCMOneshotEncrypt`/`Decrypt` availability on the deployment
+  target.
+
 ## [1.3.0] - 2026-08-29
 
 Closes the two remaining gaps found comparing this SDK against
