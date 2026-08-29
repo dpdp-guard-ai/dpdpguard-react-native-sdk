@@ -56,6 +56,26 @@ is no longer usable from a plain JS runtime with no RN present.
   example app. The JS job cannot catch a Kotlin, Objective-C++, or codegen
   error, so without these the native code would ship unverified.
 
+### Fixed
+
+- **iOS: `SealSession`/`OpenSession` called `CCCryptorGCMOneshotEncrypt`
+  and `CCCryptorGCMOneshotDecrypt`, which do not exist.** CommonCrypto's
+  public headers declare no GCM API on current SDKs — `kCCModeGCM` is not
+  even defined — so the module could not compile at all. Replaced with
+  `ios/DpdpGuardOfflineCrypto.swift`, a CryptoKit `AES.GCM` shim.
+  `AES.GCM.SealedBox.combined` is exactly `nonce(12) || ciphertext ||
+  tag(16)`, the on-disk layout already in use, so no format migration was
+  needed.
+- Mixing Swift into the pod meant Swift's ClangImporter built the umbrella
+  module in plain Objective-C, while `DpdpGuardOffline.h` pulls in the
+  Objective-C++-only TurboModule codegen header. Fixed with
+  `SWIFT_OBJC_INTEROP_MODE=objcxx` in the podspec's `pod_target_xcconfig`.
+- CI: `example/android/gradlew` was committed non-executable (mode 100644),
+  so a fresh clone could not run it on Linux or macOS — pre-existing, and
+  it broke the Android job before it reached any Kotlin. The iOS job also
+  needed a runner newer than `macos-14`, whose Xcode `react-native@0.85`'s
+  Podfile rejects outright.
+
 ### Notes
 
 - `POST /api/v1/offline/captures` is declared `security: [apiKey]` — an
@@ -67,15 +87,14 @@ is no longer usable from a plain JS runtime with no RN present.
   on-device; only the final hop is brokered. `dpdpguard-ios-sdk` calls the
   endpoint directly because a fleet-enrolled field device may legitimately
   hold an org key — a consumer RN app cannot.
-- **The native code in `ios/` and `android/` has not been built or run.**
-  It was written on Windows with no Xcode, no Android SDK, and no Kotlin
-  compiler available; only the JavaScript layer (48 tests, including every
-  golden vector) is verified. The new CI jobs are the real gate — do not
-  consider this release verified until they are green. The most likely
-  places to need adjustment are the generated-spec method signatures the
-  native classes override, which vary by React Native version, and the
-  `CCCryptorGCMOneshotEncrypt`/`Decrypt` availability on the deployment
-  target.
+- The native code was first written without a build available (Windows, no
+  Xcode, no Android SDK, no Kotlin compiler) and shipped only after the
+  fixes below. `ios/` is now confirmed to compile and link via a local
+  `pod install` + `xcodebuild` of the example app, and both native jobs
+  build in CI. On-device behaviour — Secure Enclave key generation, the
+  StrongBox path, and a real signature verifying server-side — has still
+  not been exercised end to end; the first field capture is the real test
+  of that.
 
 ## [1.3.0] - 2026-08-29
 
