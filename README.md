@@ -78,6 +78,25 @@ Every non-2xx response throws a `DpdpGuardApiError` with a `code` from the
 ADR-002 error catalog (`err.code`, e.g. `"NOT_FOUND"`) and the HTTP
 `status`.
 
+### Types
+
+The wire types are generated from `@dpdpguard/contract`'s `openapi/v1.yaml`
+and re-exported, so you can name what the client returns instead of
+re-declaring it:
+
+```ts
+import type { DsrRequest, Notice, components } from '@dpdpguard/react-native';
+
+const notice: Notice = await client.getNotice(noticeId);
+
+// Endpoints this SDK deliberately doesn't wrap are still typed:
+type GateDecision = components['schemas']['ConsentGateDecision'];
+```
+
+The contract version these were generated from is recorded in
+`src/CONTRACT_VERSION`; `src/contractVersion.test.ts` fails if an install
+drifts off it.
+
 ## Contract
 
 Depends on

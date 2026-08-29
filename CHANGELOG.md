@@ -4,6 +4,69 @@ All notable changes to `@dpdpguard/react-native` will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0] - 2026-08-29
+
+### Changed
+
+- Bumped `@dpdpguard/contract` from `^1.5.0` to `^1.6.0` and regenerated
+  `src/generated/api-types.ts` against its `openapi/v1.yaml` (now `2.9.0`).
+  The only new route is `GET /api/v1/consent-status` (resolve an `email` to
+  the calling org's per-purpose consent grants, gated by
+  `dpdp_consent_status_lookup_enabled`). It carries an org-scoped service
+  `apiKey`, which by this SDK's security model must never ship inside a
+  mobile bundle (see "What's here vs. what's not" in README.md), so it is
+  **not** wrapped with a client method — the generated types exist, nothing
+  in `src/client.ts` calls it. Additive per ADR-002 D4; this SDK's own
+  public API is unchanged apart from the additions below, so this is a
+  minor bump.
+
+### Added
+
+- `src/index.ts` now re-exports the generated `components`, `operations`,
+  and `paths` types, plus named aliases for the wire shapes the client
+  actually returns (`OrgSummary`, `Notice`, `DsrRequest`, `Grievance`,
+  `Nomination`, `ApiError`, and `ApiConsentRecord` for `/cm/v1/consent`'s
+  record — distinct from this package's own minimal `ConsentRecord`, which
+  is what `hasConsent` gates on). Previously a consumer could call
+  `listDsrRequests()` but had no exported name for what it returned and had
+  to re-declare the shape by hand. Mirrors `dpdpguard-ios-sdk`, which
+  exposes its whole generated `DPDPGuardConsentAPI` target alongside the
+  hand-written facade.
+- `src/CONTRACT_VERSION` + `src/contractVersion.test.ts` — a contract-drift
+  guard matching `dpdpguard-android-sdk`'s `CONTRACT_VERSION` marker. The
+  caret range means a new contract minor can change this SDK's generated
+  types on a plain `npm install` with nothing in the repo recording it;
+  the test fails until the pinned version is deliberately bumped, forcing a
+  reviewed edit and a CHANGELOG entry. A second case asserts the generated
+  output still covers every path `DpdpGuardClient` calls.
+
+### Fixed
+
+- `.github/workflows/publish.yml` now runs `npm run codegen` and asserts
+  `src/generated/api-types.ts` is non-empty as explicit steps before
+  `npm publish`. `src/generated/` is gitignored yet ships in the tarball
+  (`package.json`'s `files` whitelist wins over `.gitignore`), so since
+  `1.1.1` removed the `postinstall` codegen the shipped types have depended
+  on Typecheck/Test happening to run first. Publishing from a clean clone
+  with those steps reordered or skipped would have silently produced a
+  package missing its types.
+
+## [1.1.1] - 2026-08-15 (backfilled)
+
+### Fixed
+
+- Dropped the `postinstall` hook that ran `scripts/codegen.mjs` on every
+  consumer install. It resolved `@dpdpguard/contract`'s `openapi/v1.yaml`
+  relative to this package's own nested `node_modules`, a path that
+  frequently doesn't exist under npm/pnpm hoisting — observed crashing an
+  Expo/EAS build with `ENOENT` on
+  `.../node_modules/@dpdpguard/react-native/node_modules/@dpdpguard/contract/openapi/v1.yaml`.
+  `src/generated/api-types.ts` is only ever consumed via `import type` and
+  is erased at bundle time, so it's a typecheck-time artifact, not a runtime
+  one: it is now generated once in CI (which already runs typecheck and
+  tests before publish) and shipped inside the package instead of being
+  rebuilt in every consumer's install.
+
 ## [1.1.0] - 2026-08-12
 
 ### Changed

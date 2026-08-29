@@ -46,5 +46,16 @@ jobs:
       - name: Test
         run: npm test
 
+      # src/generated/api-types.ts is gitignored but IS shipped in the
+      # tarball (package.json's `files` whitelist wins over .gitignore).
+      # Typecheck/Test above already regenerate it, but generate and assert
+      # it explicitly so reordering or skipping those steps can never
+      # silently publish a package missing its types.
+      - name: Generate API types
+        run: npm run codegen
+
+      - name: Assert generated types are present
+        run: test -s src/generated/api-types.ts
+
       - name: Publish @dpdpguard/react-native
         run: npm publish --provenance --access public
