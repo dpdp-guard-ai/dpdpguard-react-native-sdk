@@ -7,6 +7,11 @@ name: Publish @dpdpguard/react-native
 #
 # Triggers: manually (workflow_dispatch), on GitHub release published, or by pushing a tag matching v*
 # (e.g. `git tag v0.1.0 && git push origin v0.1.0`).
+#
+# Note that two of those overlap: creating a GitHub release for a tag that
+# was already pushed fires BOTH `push` and `release`, so the same version
+# would be published twice. The "Guard" step below makes this workflow
+# idempotent instead of relying on nobody doing that — see its comment.
 on:
   release:
     types: [published]
@@ -14,6 +19,12 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+
+# Serialize runs for the same version so two triggers can't race past the
+# guard simultaneously.
+concurrency:
+  group: publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -57,5 +68,37 @@ jobs:
       - name: Assert generated types are present
         run: test -s src/generated/api-types.ts
 
+      # Two guards in one:
+      #
+      # 1. A tag must match the version it claims to release. Pushing v2.0.0
+      #    while package.json still reads 1.3.0 would otherwise publish 1.3.0
+      #    under a tag that says otherwise, or fail confusingly as a
+      #    duplicate.
+      # 2. If the version is already on npm, skip rather than fail. `release:
+      #    published` and `push: tags` both fire for the same release, and a
+      #    re-run of a green workflow is a normal thing to do — neither should
+      #    produce a red X for work that already succeeded.
+      - name: Guard against a mismatched tag or a duplicate publish
+        id: guard
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          echo "package.json version: $VERSION"
+
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            if [ "$TAG_VERSION" != "$VERSION" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME claims version $TAG_VERSION but package.json says $VERSION."
+              exit 1
+            fi
+          fi
+
+          if npm view "@dpdpguard/react-native@$VERSION" version >/dev/null 2>&1; then
+            echo "::notice::@dpdpguard/react-native@$VERSION is already on npm; nothing to publish."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish @dpdpguard/react-native
+        if: steps.guard.outputs.skip != 'true'
         run: npm publish --provenance --access public
