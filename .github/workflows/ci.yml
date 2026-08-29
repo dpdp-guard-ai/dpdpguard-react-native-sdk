@@ -45,11 +45,19 @@ jobs:
 
   ios:
     name: Build native module (iOS)
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+
+      # react-native 0.85's Podfile refuses an older toolchain outright
+      # ("Invalid `Podfile` file: Please upgrade XCode"), which is what
+      # failed the first run of this job on macos-14.
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Install library dependencies
         run: npm install
