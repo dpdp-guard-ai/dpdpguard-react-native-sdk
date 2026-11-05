@@ -4,6 +4,15 @@ All notable changes to `@dpdpguard/react-native` will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.0] - 2026-11-05
+
+### Changed
+
+- `@dpdpguard/contract` dependency and `src/CONTRACT_VERSION` bumped from
+  `1.6.0` to `1.9.0` (OpenAPI `2.23.1`); generated API types re-derived.
+  All intervening releases are additive, with no error-catalog or audit-hash
+  changes. `typecheck` and tests (48/48) pass.
+
 ## [2.0.0] - 2026-08-29
 
 Offline consent capture, closing the last gap against `dpdpguard-ios-sdk`
